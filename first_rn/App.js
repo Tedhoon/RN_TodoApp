@@ -1,9 +1,10 @@
 import React ,{Component} from 'react';
-import { StyleSheet, View , FlatList } from 'react-native';
+import { StyleSheet, View , FlatList ,AsyncStorage } from 'react-native';
 import Header from './src/components/Header';
 import Subtitle from './src/components/Subtitle';
 import InputBox from './src/components/InputBox';
 import TodoItem from './src/components/TodoItem';
+// import { AsyncResource } from 'async_hooks';
 
 export default class App extends Component { 
   constructor(props){
@@ -24,9 +25,38 @@ export default class App extends Component {
     }
   }
 
+  componentWillMount() {
+    this._getData();    
+  }
+
+  _storeData = () => {
+    AsyncStorage.setItem('@todo:state', JSON.stringify(this.state)); //키 밸류형식으로 저장 키네임, json밸류
+  }
+
+  _getData = () => {
+    AsyncStorage.getItem('@todo:state').then((state) => {
+      if (state !== null) {
+        this.setState(JSON.parse(state));
+      }
+    })
+  }
+
   _makeTodoItem = ({item,index}) => {
     return(
-    <TodoItem text = {item.title} />
+    <TodoItem 
+      text = {item.title}
+      isComplete = {item.isComplete} //props명과 state명을 일치 //클릭되었는지 현재 상태만 나타내줌
+      changeComplete = {() => {
+        const newTodo = [...this.state.todos];
+        newTodo[index].isComplete = !newTodo[index].isComplete; //클릭한 대상의 index를 가져와서 반대로 뒤집어줌
+        this.setState({todos:newTodo}, this._storeData)
+      }}
+      deleteItem = {() => {
+        const newTodo = [ ...this.state.todos];
+        newTodo.splice(index, 1); //배열에서 하나를 삭제 splice(시작지점, 몇개없을껀지))
+        this.setState({todos:newTodo}, this._storeData)
+      }}
+    />
     )
   }
   _changeText = (value) => {
@@ -37,12 +67,12 @@ export default class App extends Component {
   _addTodoItem = () => {
     if(this.state.inPutValue !== '') {
       const prevTodo = this.state.todos;
-      const newTodo = { title : this.state.inPutValue };
+      const newTodo = { title : this.state.inPutValue , isComplete : false };
       
       this.setState({
         inPutValue : '',
-        todos : prevTodo.concat(newTodo)
-      });
+        todos : prevTodo.concat(newTodo) //concat을 이용해 배열을 안으로 넣어줌
+      }, this._storeData);
     }
   }
 
